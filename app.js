@@ -1,259 +1,70 @@
 const $=s=>document.querySelector(s);
 const colors=['#f5c542','#ff8a65','#ef5350','#66bb6a','#29b6f6','#7157e8','#ec4899','#111827','#ffffff'];
-const types={
- text:{title:'Text',w:300,h:180,color:'#7157e8'},
- image:{title:'Image',w:380,h:280,color:'#29b6f6'},
- video:{title:'Video',w:420,h:280,color:'#ef5350'},
- shot:{title:'Shot',w:360,h:390,color:'#7157e8'},
- note:{title:'Note',w:260,h:220,color:'#f5c542'},
- link:{title:'Link',w:320,h:170,color:'#29b6f6'},
- checklist:{title:'Tasks',w:300,h:220,color:'#66bb6a'},
- color:{title:'Color',w:190,h:190,color:'#7157e8'},
- section:{title:'Section',w:520,h:110,color:'#111827'}
-};
-
-let state={
- name:'Untitled Creative Project',
- zoom:1,
- panX:0,panY:0,
- items:[],
- selected:null,
- history:[],
- future:[]
-};
-
-function uid(){return Math.random().toString(36).slice(2,10)}
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1300)}
-function snapshot(){return JSON.stringify({name:state.name,items:state.items})}
-function pushHistory(){state.history.push(snapshot());if(state.history.length>50)state.history.shift();state.future=[]}
-function restore(s){let x=JSON.parse(s);state.name=x.name;state.items=x.items;state.selected=null;render();syncInspector()}
-function undo(){if(!state.history.length)return;state.future.push(snapshot());restore(state.history.pop());toast('Undo')}
-function redo(){if(!state.future.length)return;state.history.push(snapshot());restore(state.future.pop());toast('Redo')}
-
-function save(){
- state.name=$('#projectName').value;
- localStorage.setItem('framedeck-v2',JSON.stringify({name:state.name,zoom:state.zoom,panX:state.panX,panY:state.panY,items:state.items}));
- toast('Saved locally');
-}
-function load(){
- try{
-  const x=JSON.parse(localStorage.getItem('framedeck-v2'));
-  if(x){Object.assign(state,x);$('#projectName').value=state.name||''}
- }catch(e){}
-}
-
-function boardPoint(clientX,clientY){
- const r=$('#viewport').getBoundingClientRect();
- return {x:(clientX-r.left-state.panX)/state.zoom+3000,y:(clientY-r.top-state.panY)/state.zoom+2000}
-}
-function applyBoardTransform(){
- $('#board').style.transform=`translate(${state.panX}px,${state.panY}px) scale(${state.zoom})`;
- $('#zoomValue').textContent=Math.round(state.zoom*100)+'%';
-}
-function centerBoard(){state.panX=$('#viewport').clientWidth/2;state.panY=$('#viewport').clientHeight/2;applyBoardTransform()}
-function setZoom(z,cx,cy){
- z=Math.max(.25,Math.min(2.5,z));
- const r=$('#viewport').getBoundingClientRect();
- const x=cx==null?r.width/2:cx-r.left,y=cy==null?r.height/2:cy-r.top;
- const worldX=(x-state.panX)/state.zoom,worldY=(y-state.panY)/state.zoom;
- state.zoom=z;state.panX=x-worldX*z;state.panY=y-worldY*z;applyBoardTransform();
-}
-
-function defaultItem(type,x=2850,y=1900){
- const d=types[type];
- let i={id:uid(),type,x,y,w:d.w,h:d.h,title:d.title,color:d.color,content:''};
- if(type==='text'){i.content='Your creative idea goes here.'}
- if(type==='note'){i.content='Add a thought, reference or client note...'}
- if(type==='section'){i.content='CREATIVE DIRECTION'}
- if(type==='checklist'){i.content='Find location\\nConfirm wardrobe\\nShoot test footage\\nFinal edit'}
- if(type==='link'){i.content='Reference website'}
- if(type==='color'){i.content='#7157e8'}
- if(type==='shot'){i.content='Athlete enters the gym.';i.shotSize='Wide';i.cameraMove='Slow push-in';i.lens='24mm';i.audio='Room tone + footsteps';i.directorNotes='Keep the background clean.'}
- return i
-}
-
-function add(type){
- pushHistory();
- const i=defaultItem(type,3000-state.panX/state.zoom+40,2000-state.panY/state.zoom+40);
- state.items.push(i);state.selected=i.id;render();syncInspector();save();
-}
-function addMedia(file){
- const reader=new FileReader();
- reader.onload=()=>{
-  pushHistory();
-  const type=file.type.startsWith('video')?'video':'image';
-  const i=defaultItem(type,3000-state.panX/state.zoom+40,2000-state.panY/state.zoom+40);
-  i.src=reader.result;i.title=file.name;
-  state.items.push(i);state.selected=i.id;render();syncInspector();save();
- };
- reader.readAsDataURL(file);
-}
-
-function render(){
- const box=$('#items');box.innerHTML='';
- state.items.forEach(i=>box.appendChild(createCard(i)));
- $('#emptyHint').style.display=state.items.length?'none':'flex';
- applyBoardTransform();
-}
-function createCard(i){
- const card=document.createElement('div');
- card.className='card '+(state.selected===i.id?'selected':'');
- card.dataset.id=i.id;
- card.style.left=i.x+'px';card.style.top=i.y+'px';card.style.width=i.w+'px';card.style.height=i.h+'px';
-
- const header=document.createElement('div');header.className='card-header';
- header.innerHTML=`<span class="handle">⠿</span><span class="card-dot" style="background:${i.color}"></span><span class="card-title">${esc(i.title||types[i.type].title)}</span>`;
- card.appendChild(header);
-
- const body=document.createElement('div');body.className='card-body';
- if(i.type==='text'){body.classList.add('text-body');body.textContent=i.content}
- if(i.type==='note'){body.classList.add('note-body');body.textContent=i.content}
- if(i.type==='image'){body.classList.add('image-body');body.innerHTML=i.src?`<img src="${i.src}">`:'<div class="empty-hint" style="position:static;transform:none">Add an image</div>'}
- if(i.type==='video'){body.classList.add('video-body');body.innerHTML=i.src?`<video src="${i.src}" controls muted loop></video>`:'<div class="empty-hint" style="position:static;transform:none">Add a video</div>'}
- if(i.type==='link'){body.classList.add('link-body');body.innerHTML=`<strong>${esc(i.content||'Reference')}</strong><br><br><a href="${esc(i.url||'#')}" target="_blank">${esc(i.url||'Add URL in inspector')}</a>`}
- if(i.type==='color'){body.classList.add('color-body');body.innerHTML=`<div class="color-swatch" style="background:${esc(i.content||i.color)}">${esc(i.content||i.color)}</div>`}
- if(i.type==='section'){body.classList.add('section-body');body.textContent=i.content}
- if(i.type==='checklist'){
-   body.innerHTML='';
-   String(i.content||'').split('\\n').filter(Boolean).forEach((x,n)=>{
-    const row=document.createElement('label');row.className='check-row';row.innerHTML=`<input type="checkbox"> <span>${esc(x)}</span>`;body.appendChild(row)
-   });
- }
- if(i.type==='shot'){
-   body.classList.add('shot-body');
-   body.innerHTML=`
-   <div class="shot-image">${i.src?`<img src="${i.src}">`:'FRAME REFERENCE'}</div>
-   <strong>${esc(i.content||'Shot description')}</strong>
-   <div class="shot-meta">
-    <div><span>SIZE</span><br>${esc(i.shotSize||'Wide')}</div>
-    <div><span>MOVE</span><br>${esc(i.cameraMove||'')}</div>
-    <div><span>LENS</span><br>${esc(i.lens||'')}</div>
-    <div><span>AUDIO</span><br>${esc(i.audio||'')}</div>
-   </div>
-   <p><span>NOTES</span><br>${esc(i.directorNotes||'')}</p>`;
- }
- card.appendChild(body);
- const rh=document.createElement('div');rh.className='resize-handle';card.appendChild(rh);
-
- card.addEventListener('mousedown',e=>{
-   if(e.target===rh)return;
-   select(i.id);
-   if(e.target.closest('a')||e.target.closest('input'))return;
-   dragItem(e,i,false);
- });
- rh.addEventListener('mousedown',e=>{e.stopPropagation();select(i.id);dragItem(e,i,true)});
- card.addEventListener('dblclick',()=>{if(i.type==='text'||i.type==='note'||i.type==='section'){select(i.id);$('#fieldContent').focus()}});
- return card;
-}
-
-function select(id){state.selected=id;render();syncInspector()}
-function dragItem(e,item,resize){
- e.preventDefault();
- const start={mx:e.clientX,my:e.clientY,x:item.x,y:item.y,w:item.w,h:item.h};
- const before=snapshot();
- const move=ev=>{
-  const dx=(ev.clientX-start.mx)/state.zoom,dy=(ev.clientY-start.my)/state.zoom;
-  if(resize){item.w=Math.max(90,start.w+dx);item.h=Math.max(70,start.h+dy)}
-  else{item.x=start.x+dx;item.y=start.y+dy}
-  render();
- };
- const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);state.history.push(before);state.future=[];save()};
- document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
-}
-
-let panning=null;
-$('#viewport').addEventListener('mousedown',e=>{
- if(e.button!==1 && !(e.button===0&&(e.target.id==='viewport'||e.target.id==='grid'||e.target.id==='board')))return;
- panning={mx:e.clientX,my:e.clientY,px:state.panX,py:state.panY};
- const move=ev=>{state.panX=panning.px+ev.clientX-panning.mx;state.panY=panning.py+ev.clientY-panning.my;applyBoardTransform()};
- const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up)};
- document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
-});
-window.addEventListener('keydown',e=>{
- if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();save()}
- if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo()}
- if((e.ctrlKey||e.metaKey)&&e.key==='y'){e.preventDefault();redo()}
- if((e.key==='Delete'||e.key==='Backspace')&&state.selected&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){deleteSelected()}
- if(e.code==='Space'&&!panning){$('#viewport').style.cursor='grab'}
-});
-window.addEventListener('keyup',e=>{if(e.code==='Space')$('#viewport').style.cursor='default'});
-$('#viewport').addEventListener('wheel',e=>{e.preventDefault();setZoom(state.zoom*(e.deltaY<0?1.08:.92),e.clientX,e.clientY)},{passive:false});
-
-function syncInspector(){
- const i=state.items.find(x=>x.id===state.selected);
- $('#noSelection').hidden=!!i;$('#inspector').hidden=!i;
- if(!i)return;
- $('#selectedType').textContent=types[i.type]?.title||i.type;
- $('#fieldTitle').value=i.title||'';
- $('#fieldContent').value=i.content||'';
- $('#fieldX').value=Math.round(i.x);$('#fieldY').value=Math.round(i.y);
- $('#fieldW').value=Math.round(i.w);$('#fieldH').value=Math.round(i.h);
- $('#colorChoices').innerHTML=colors.map(c=>`<button class="color-choice" style="background:${c}" data-color="${c}"></button>`).join('');
- document.querySelectorAll('.color-choice').forEach(b=>b.onclick=()=>{pushHistory();i.color=b.dataset.color;render();syncInspector();save()});
- $('#shotFields').hidden=i.type!=='shot';
- $('#linkFields').hidden=i.type!=='link';
- if(i.type==='shot'){
-  $('#shotSize').value=i.shotSize||'Wide';$('#cameraMove').value=i.cameraMove||'';$('#lens').value=i.lens||'';$('#audio').value=i.audio||'';$('#directorNotes').value=i.directorNotes||'';
- }
- if(i.type==='link')$('#urlField').value=i.url||'';
-}
-function bindField(id,key,number=false){
- $('#'+id).addEventListener('input',e=>{
-  const i=state.items.find(x=>x.id===state.selected);if(!i)return;
-  i[key]=number?Number(e.target.value):e.target.value;render();
- });
-}
-bindField('fieldTitle','title');bindField('fieldContent','content');
-bindField('fieldX','x',true);bindField('fieldY','y',true);bindField('fieldW','w',true);bindField('fieldH','h',true);
-['shotSize','cameraMove','lens','audio','directorNotes'].forEach(id=>bindField(id,{shotSize:'shotSize',cameraMove:'cameraMove',lens:'lens',audio:'audio',directorNotes:'directorNotes'}[id]));
-bindField('urlField','url');
-
-function deleteSelected(){
- if(!state.selected)return;
- pushHistory();state.items=state.items.filter(x=>x.id!==state.selected);state.selected=null;render();syncInspector();save();
-}
-$('#deleteSelected').onclick=deleteSelected;
-$('#deleteBtn').onclick=deleteSelected;
-$('#duplicateBtn').onclick=()=>{
- const i=state.items.find(x=>x.id===state.selected);if(!i)return;
- pushHistory();const n=JSON.parse(JSON.stringify(i));n.id=uid();n.x+=30;n.y+=30;state.items.push(n);state.selected=n.id;render();syncInspector();save();
-};
-$('#bringFrontBtn').onclick=()=>{
- const i=state.items.find(x=>x.id===state.selected);if(!i)return;
- pushHistory();state.items=state.items.filter(x=>x.id!==i.id);state.items.push(i);render();save();
-};
-document.querySelectorAll('.add-tool').forEach(b=>b.onclick=()=>add(b.dataset.type));
-$('#uploadBtn').onclick=()=>$('#fileInput').click();
-$('#fileInput').onchange=e=>[...e.target.files].forEach(addMedia);
-
-$('#zoomIn').onclick=()=>setZoom(state.zoom*1.15);
-$('#zoomOut').onclick=()=>setZoom(state.zoom/1.15);
-$('#fitBtn').onclick=()=>{if(!state.items.length){centerBoard();return}let minX=Math.min(...state.items.map(i=>i.x)),minY=Math.min(...state.items.map(i=>i.y)),maxX=Math.max(...state.items.map(i=>i.x+i.w)),maxY=Math.max(...state.items.map(i=>i.y+i.h));let vw=$('#viewport').clientWidth-100,vh=$('#viewport').clientHeight-100;let z=Math.min(vw/(maxX-minX),vh/(maxY-minY),1.2);state.zoom=Math.max(.25,z);state.panX=$('#viewport').clientWidth/2-((minX+maxX)/2-3000)*state.zoom;state.panY=$('#viewport').clientHeight/2-((minY+maxY)/2-2000)*state.zoom;applyBoardTransform()};
-$('#undoBtn').onclick=undo;$('#redoBtn').onclick=redo;
-$('#saveBtn').onclick=save;
-$('#projectName').oninput=e=>state.name=e.target.value;
-
-$('#clearBtn').onclick=()=>{if(confirm('Clear the entire board?')){pushHistory();state.items=[];state.selected=null;render();syncInspector();save()}};
-
-$('#exportBtn').onclick=()=>{
- const data={...state,history:undefined,future:undefined};
- const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
- const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(state.name||'framedeck').replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.json';a.click();URL.revokeObjectURL(a.href);toast('Project exported');
-};
-
-$('#presentBtn').onclick=()=>{
- const p=document.createElement('div');p.className='present';
- const close=document.createElement('button');close.className='btn primary close';close.textContent='Close';close.onclick=()=>p.remove();p.appendChild(close);
- const card=document.createElement('div');card.className='present-card';
- const title=document.createElement('h1');title.textContent=state.name;title.style.marginTop='0';card.appendChild(title);
- const sub=document.createElement('p');sub.textContent='Creative board presentation';sub.style.color='#777';card.appendChild(sub);
- const list=document.createElement('div');list.style='display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-height:65vh;overflow:auto';
- state.items.forEach(i=>{const d=document.createElement('div');d.style='border:1px solid #ddd;border-radius:8px;padding:10px;min-height:80px';d.innerHTML=`<b>${esc(i.title)}</b><p style="font-size:12px">${esc(i.content||'')}</p>`;list.appendChild(d)});
- card.appendChild(list);p.appendChild(card);document.body.appendChild(p);
-};
-
-function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-
-load();render();syncInspector();
-if(!state.panX&&!state.panY)centerBoard();
-applyBoardTransform();
+const types={text:['Text',300,180,'#7157e8'],image:['Image',380,280,'#29b6f6'],video:['Video',420,280,'#ef5350'],shot:['Shot',360,390,'#7157e8'],note:['Note',260,220,'#f5c542'],link:['Link',320,170,'#29b6f6'],checklist:['Tasks',300,220,'#66bb6a'],color:['Color',190,190,'#7157e8'],section:['Section',520,110,'#111827']};
+let state={name:'Untitled Creative Project',zoom:1,panX:0,panY:0,items:[],selected:null,history:[],future:[]},space=false;
+const uid=()=>Math.random().toString(36).slice(2,10),esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function toast(s){let t=$('#toast');t.textContent=s;t.classList.add('show');clearTimeout(window.tt);window.tt=setTimeout(()=>t.classList.remove('show'),1200)}
+function snap(){return JSON.stringify({name:state.name,items:state.items})} function hist(){state.history.push(snap());state.future=[]}
+function save(){state.name=$('#projectName').value;localStorage.setItem('framedeck-v5',JSON.stringify(state));toast('Saved locally')}
+function load(){try{let x=JSON.parse(localStorage.getItem('framedeck-v5'));if(x)Object.assign(state,x)}catch(e){}$('#projectName').value=state.name}
+function transform(){$('#board').style.transform=`translate(${state.panX}px,${state.panY}px) scale(${state.zoom})`;$('#zoomValue').textContent=Math.round(state.zoom*100)+'%'}
+function center(){state.panX=$('#viewport').clientWidth/2;state.panY=$('#viewport').clientHeight/2;transform()}
+function zoom(z,cx,cy){z=Math.max(.25,Math.min(4,z));let r=$('#viewport').getBoundingClientRect(),x=cx==null?r.width/2:cx-r.left,y=cy==null?r.height/2:cy-r.top,wx=(x-state.panX)/state.zoom,wy=(y-state.panY)/state.zoom;state.zoom=z;state.panX=x-wx*z;state.panY=y-wy*z;transform()}
+function fit(){if(!state.items.length){center();return}let minX=Math.min(...state.items.map(i=>i.x)),minY=Math.min(...state.items.map(i=>i.y)),maxX=Math.max(...state.items.map(i=>i.x+i.w)),maxY=Math.max(...state.items.map(i=>i.y+i.h)),w=maxX-minX,h=maxY-minY;state.zoom=Math.max(.25,Math.min(1.5,($('#viewport').clientWidth-100)/w,($('#viewport').clientHeight-100)/h));state.panX=$('#viewport').clientWidth/2-((minX+maxX)/2-5000)*state.zoom;state.panY=$('#viewport').clientHeight/2-((minY+maxY)/2-3500)*state.zoom;transform()}
+function base(type,x,y){let t=types[type],i={id:uid(),type,x,y,w:t[1],h:t[2],title:t[0],color:t[3],content:''};if(type==='text')i.content='Your creative idea goes here.';if(type==='note')i.content='Add a thought, reference or client note...';if(type==='section')i.content='CREATIVE DIRECTION';if(type==='checklist')i.content='Find location\\nConfirm wardrobe\\nShoot test footage\\nFinal edit';if(type==='link')i.content='Reference website';if(type==='color')i.content='#7157e8';if(type==='shot')Object.assign(i,{content:'Shot description',shotSize:'Wide',cameraMove:'Slow push-in',lens:'24mm',audio:'Room tone + footsteps',directorNotes:'Keep the background clean.'});return i}
+function add(type){hist();let i=base(type,5000-state.panX/state.zoom+40,3500-state.panY/state.zoom+40);state.items.push(i);state.selected=i.id;render();inspect();save()}
+function media(file){let r=new FileReader();r.onload=()=>{hist();let type=file.type.startsWith('video')?'video':'image',i=base(type,5000-state.panX/state.zoom+40,3500-state.panY/state.zoom+40);i.src=r.result;i.title=file.name;state.items.push(i);state.selected=i.id;render();inspect();save()};r.readAsDataURL(file)}
+function card(i){let c=document.createElement('div');c.className='card '+(state.selected===i.id?'selected':'');c.style.cssText=`left:${i.x}px;top:${i.y}px;width:${i.w}px;height:${i.h}px`;c.dataset.id=i.id;c.innerHTML=`<div class="card-header"><span>⠿</span><span class="card-dot" style="background:${esc(i.color)}"></span><span class="card-title">${esc(i.title)}</span></div>`;let b=document.createElement('div');b.className='card-body';
+if(i.type==='text'||i.type==='note'){b.classList.add(i.type==='note'?'note-body':'text-body');b.textContent=i.content}
+if(i.type==='image')b.classList.add('image-body'),b.innerHTML=i.src?`<img src="${i.src}">`:'Add image';
+if(i.type==='video')b.classList.add('video-body'),b.innerHTML=i.src?`<video src="${i.src}" controls muted loop></video>`:'Add video';
+if(i.type==='link')b.classList.add('link-body'),b.innerHTML=`<strong>${esc(i.content)}</strong><br><br><a target="_blank" href="${esc(i.url||'#')}">${esc(i.url||'Add URL')}</a>`;
+if(i.type==='color')b.classList.add('color-body'),b.innerHTML=`<div class="color-swatch" style="background:${esc(i.content||i.color)}">${esc(i.content||i.color)}</div>`;
+if(i.type==='section')b.classList.add('section-body'),b.textContent=i.content;
+if(i.type==='checklist')String(i.content).split('\\n').filter(Boolean).forEach(x=>b.innerHTML+=`<label class="check-row"><input type="checkbox">${esc(x)}</label>`);
+if(i.type==='shot')b.classList.add('shot-body'),b.innerHTML=`<div class="shot-image">${i.src?`<img src="${i.src}">`:'FRAME REFERENCE'}</div><strong>${esc(i.content)}</strong><div class="shot-meta"><div>SIZE<br>${esc(i.shotSize)}</div><div>MOVE<br>${esc(i.cameraMove)}</div><div>LENS<br>${esc(i.lens)}</div><div>AUDIO<br>${esc(i.audio)}</div></div><p>NOTES<br>${esc(i.directorNotes)}</p>`;
+c.appendChild(b);let rh=document.createElement('div');rh.className='resize-handle';c.appendChild(rh);
+c.addEventListener('mousedown',e=>{if(e.target===rh)return;select(i.id);if(!e.target.closest('a,input'))drag(e,i,false)});rh.addEventListener('mousedown',e=>{e.stopPropagation();select(i.id);drag(e,i,true)});return c}
+function render(){let box=$('#items');box.innerHTML='';state.items.forEach(i=>box.appendChild(card(i)));$('#emptyHint').style.display=state.items.length?'none':'flex';transform()}
+function drag(e,i,resize){e.preventDefault();let s={mx:e.clientX,my:e.clientY,x:i.x,y:i.y,w:i.w,h:i.h},before=snap();function mv(ev){let dx=(ev.clientX-s.mx)/state.zoom,dy=(ev.clientY-s.my)/state.zoom;if(resize){i.w=Math.max(90,s.w+dx);i.h=Math.max(70,s.h+dy)}else{i.x=s.x+dx;i.y=s.y+dy}render()}function up(){document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);state.history.push(before);state.future=[];save()}document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)}
+function select(id){state.selected=id;render();inspect()}
+function inspect(){let i=state.items.find(x=>x.id===state.selected);$('#noSelection').hidden=!!i;$('#inspector').hidden=!i;if(!i)return;$('#selectedType').textContent=types[i.type][0];$('#fieldTitle').value=i.title||'';$('#fieldContent').value=i.content||'';$('#fieldX').value=i.x;$('#fieldY').value=i.y;$('#fieldW').value=i.w;$('#fieldH').value=i.h;$('#colorChoices').innerHTML=colors.map(c=>`<button class="color-choice" data-color="${c}" style="background:${c}"></button>`).join('');document.querySelectorAll('.color-choice').forEach(x=>x.onclick=()=>{hist();i.color=x.dataset.color;render();inspect();save()});$('#shotFields').hidden=i.type!=='shot';$('#linkFields').hidden=i.type!=='link';if(i.type==='shot'){for(let k of ['shotSize','cameraMove','lens','audio','directorNotes'])$('#'+k).value=i[k]||''}if(i.type==='link')$('#urlField').value=i.url||''}
+function field(id,key,num=false){$('#'+id).addEventListener('input',e=>{let i=state.items.find(x=>x.id===state.selected);if(i){i[key]=num?Number(e.target.value):e.target.value;render()}})}
+[['fieldTitle','title'],['fieldContent','content'],['fieldX','x',true],['fieldY','y',true],['fieldW','w',true],['fieldH','h',true],['shotSize','shotSize'],['cameraMove','cameraMove'],['lens','lens'],['audio','audio'],['directorNotes','directorNotes'],['urlField','url']].forEach(x=>field(...x));
+function del(){if(!state.selected)return;hist();state.items=state.items.filter(i=>i.id!==state.selected);state.selected=null;render();inspect();save()}
+function download(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportText(){return [state.name,'','CREATIVE BOARD','',...state.items.map((i,n)=>`${n+1}. ${i.title}\\nType: ${types[i.type][0]}\\n${i.content||''}\\n`).join('\\n')].join('\\n')}
+function exportHTML(){let html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(state.name)}</title><style>body{font-family:Arial;padding:40px;background:#f3f1eb}h1{margin-bottom:30px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}.card{background:white;border:1px solid #ddd;border-radius:10px;padding:18px;page-break-inside:avoid}.card img{max-width:100%;max-height:350px;object-fit:contain}</style></head><body><h1>${esc(state.name)}</h1><div class="grid">${state.items.map(i=>`<article class="card"><h3>${esc(i.title)}</h3><small>${esc(types[i.type][0])}</small><p>${esc(i.content||'').replace(/\\n/g,'<br>')}</p>${i.src&&i.type==='image'?`<img src="${i.src}">`:''}</article>`).join('')}</div></body></html>`;download(new Blob([html],{type:'text/html'}),state.name.replace(/\\W+/g,'-')+'.html')}
+function exportDoc(){let body=state.items.map(i=>`<div style="margin-bottom:22px"><h2>${esc(i.title)}</h2><p><b>Type:</b> ${esc(types[i.type][0])}</p><p>${esc(i.content||'').replace(/\\n/g,'<br>')}</p>${i.src&&i.type==='image'?`<img src="${i.src}" style="max-width:600px;max-height:400px">`:''}</div>`).join('');download(new Blob(['\\ufeff',`<html><body><h1>${esc(state.name)}</h1>${body}</body></html>`],{type:'application/msword'}),state.name.replace(/\\W+/g,'-')+'.doc')}
+function exportPDF(){let w=window.open('','_blank');if(!w){toast('Allow pop-ups for PDF export');return}w.document.write(`<html><head><title>${esc(state.name)}</title><style>body{font-family:Arial;padding:35px}article{border:1px solid #ddd;padding:15px;margin:0 0 18px;page-break-inside:avoid}img{max-width:100%;max-height:450px}</style></head><body><h1>${esc(state.name)}</h1>${state.items.map(i=>`<article><h2>${esc(i.title)}</h2><p><b>${esc(types[i.type][0])}</b></p><p>${esc(i.content||'').replace(/\\n/g,'<br>')}</p>${i.src&&i.type==='image'?`<img src="${i.src}">`:''}</article>`).join('')}</body></html>`);w.document.close();setTimeout(()=>w.print(),500)}
+document.querySelectorAll('.add-tool').forEach(b=>b.onclick=()=>add(b.dataset.type));$('#uploadBtn').onclick=()=>$('#fileInput').click();$('#fileInput').onchange=e=>[...e.target.files].forEach(media);$('#deleteBtn').onclick=del;$('#deleteSelected').onclick=del;
+$('#collapseLeft').onclick=()=>{$('#app').classList.toggle('left-retracted');$('#collapseLeft').textContent=$('#app').classList.contains('left-retracted')?'›':'‹';};
+$('#collapseRight').onclick=()=>{$('#app').classList.toggle('right-retracted');$('#collapseRight').textContent=$('#app').classList.contains('right-retracted')?'‹':'›';};
+$('#fullscreenBtn').onclick=()=>$('#app').classList.toggle('clean');
+$('#fitBtn').onclick=fit;$('#zoomIn').onclick=()=>zoom(state.zoom*1.15);$('#zoomOut').onclick=()=>zoom(state.zoom/1.15);$('#saveBtn').onclick=save;$('#projectName').oninput=e=>state.name=e.target.value;
+$('#undoBtn').onclick=()=>{if(state.history.length){state.future.push(snap());let x=JSON.parse(state.history.pop());state.name=x.name;state.items=x.items;$('#projectName').value=state.name;state.selected=null;render();inspect()}};
+$('#redoBtn').onclick=()=>{if(state.future.length){state.history.push(snap());let x=JSON.parse(state.future.pop());state.name=x.name;state.items=x.items;$('#projectName').value=state.name;render();inspect()}};
+$('#duplicateBtn').onclick=()=>{let i=state.items.find(x=>x.id===state.selected);if(!i)return;hist();let n=JSON.parse(JSON.stringify(i));n.id=uid();n.x+=35;n.y+=35;state.items.push(n);state.selected=n.id;render();inspect();save()};
+$('#bringFrontBtn').onclick=()=>{let i=state.items.find(x=>x.id===state.selected);if(!i)return;hist();state.items=state.items.filter(x=>x.id!==i.id);state.items.push(i);render();save()};
+$('#clearBtn').onclick=()=>{if(confirm('Clear the entire board?')){hist();state.items=[];state.selected=null;render();inspect();save()}};
+$('#exportBtn').onclick=()=>$('#exportMenu').classList.toggle('open');
+document.querySelectorAll('[data-export]').forEach(b=>b.onclick=()=>{let t=b.dataset.export;$('#exportMenu').classList.remove('open');if(t==='json')download(new Blob([JSON.stringify({name:state.name,items:state.items},null,2)],{type:'application/json'}),'framedeck-project.json');if(t==='html')exportHTML();if(t==='doc')exportDoc();if(t==='pdf')exportPDF();if(t==='txt')download(new Blob([exportText()],{type:'text/plain'}),'framedeck-project.txt')});
+document.addEventListener('click',e=>{if(!e.target.closest('.export-wrap'))$('#exportMenu').classList.remove('open')});
+$('#presentBtn').onclick=()=>{let p=document.createElement('div');p.style='position:fixed;inset:0;background:#111;z-index:999;padding:40px;overflow:auto;color:#111';p.innerHTML=`<button class="btn primary" style="position:fixed;right:20px;top:20px" onclick="this.parentElement.remove()">Close</button><div style="background:white;padding:30px;border-radius:12px;max-width:1100px;margin:auto"><h1>${esc(state.name)}</h1><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">${state.items.map(i=>`<div style="border:1px solid #ddd;border-radius:8px;padding:12px"><b>${esc(i.title)}</b><p>${esc(i.content||'')}</p>${i.src&&i.type==='image'?`<img style="width:100%" src="${i.src}">`:''}</div>`).join('')}</div></div>`;document.body.appendChild(p)};
+$('#viewport').addEventListener('wheel',e=>{e.preventDefault();zoom(state.zoom*(e.deltaY<0?1.08:.92),e.clientX,e.clientY)},{passive:false});
+$('#viewport').addEventListener('mousedown',e=>{if(e.button===1||space){if(e.target.closest('.card')&&!space)return;e.preventDefault();let s={x:e.clientX,y:e.clientY,px:state.panX,py:state.panY};function m(v){state.panX=s.px+v.clientX-s.x;state.panY=s.py+v.clientY-s.y;transform()}function u(){document.removeEventListener('mousemove',m);document.removeEventListener('mouseup',u)}document.addEventListener('mousemove',m);document.addEventListener('mouseup',u)}});
+window.addEventListener('keydown',e=>{if(e.code==='Space'){space=true;$('#viewport').style.cursor='grab'}if(e.key.toLowerCase()==='f'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();fit()}if(e.key==='Tab'){e.preventDefault();$('#app').classList.toggle('clean')}if((e.key==='Delete'||e.key==='Backspace')&&state.selected&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))del();if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();save()}});
+window.addEventListener('keyup',e=>{if(e.code==='Space'){space=false;$('#viewport').style.cursor='default'}});
+window.addEventListener('resize',()=>{if(!state.items.length)center()});
+load();render();inspect();center();
+// V6 Pitch / Approval / Quote layer — sits on top of the existing editor.
+let pitchData=JSON.parse(localStorage.getItem('framedeck-v6-pitch')||'null')||{clientName:'',objective:'',bigIdea:'',whyWorks:'',execution:'',approved:false,approval:{},quote:{lines:[{name:'Creative Development',amount:0},{name:'Production',amount:0},{name:'Post Production',amount:0}],validity:'14 days',payment:'50% deposit / 50% completion',number:'FD-001'}};
+function savePitch(){localStorage.setItem('framedeck-v6-pitch',JSON.stringify(pitchData))}
+function openPitch(){ $('#pitchModal').hidden=false; $('#clientName').value=pitchData.clientName; $('#pitchObjective').value=pitchData.objective; $('#bigIdea').value=pitchData.bigIdea; $('#whyWorks').value=pitchData.whyWorks; $('#executionNotes').value=pitchData.execution; renderApproval(); renderQuoteLines(); }
+function closePitch(){$('#pitchModal').hidden=true}
+function renderApproval(){let a=$('#approvalStatus');if(pitchData.approved){a.className='approval-status approved';a.textContent='✓ Concept approved'+(pitchData.approval.name?' by '+pitchData.approval.name:'');$('#approveConcept').disabled=true;$('#quoteLocked').hidden=true;$('#quoteBuilder').hidden=false}else{a.className='approval-status locked';a.textContent='🔒 Waiting for client approval';$('#approveConcept').disabled=false;$('#quoteLocked').hidden=false;$('#quoteBuilder').hidden=true}$('#approvalName').value=pitchData.approval.name||pitchData.clientName||'';$('#approvalEmail').value=pitchData.approval.email||'';$('#approvalNote').value=pitchData.approval.note||''}
+function renderQuoteLines(){let q=pitchData.quote;$('#quoteNumber').value=q.number;$('#quoteValidity').value=q.validity;$('#paymentTerms').value=q.payment;let box=$('#quoteLines');box.innerHTML='';q.lines.forEach((l,n)=>{let d=document.createElement('div');d.className='quote-line';d.innerHTML=`<input class="qname" value="${esc(l.name)}" placeholder="Service"><input class="qamount" type="number" min="0" value="${Number(l.amount)||0}" placeholder="Amount"><button class="quote-remove" data-n="${n}">×</button>`;box.appendChild(d);d.querySelector('.qname').oninput=e=>{l.name=e.target.value;savePitch()};d.querySelector('.qamount').oninput=e=>{l.amount=Number(e.target.value)||0;updateTotal();savePitch()};d.querySelector('.quote-remove').onclick=()=>{q.lines.splice(n,1);renderQuoteLines();savePitch()}});updateTotal()}
+function updateTotal(){let total=pitchData.quote.lines.reduce((a,l)=>a+(Number(l.amount)||0),0);$('#quoteTotal').textContent='KES '+total.toLocaleString()}
+function quoteHTML(){let q=pitchData.quote,total=q.lines.reduce((a,l)=>a+(Number(l.amount)||0),0);return `<!doctype html><html><head><meta charset="utf-8"><title>Quotation - ${esc(state.name)}</title><style>body{font-family:Arial;padding:45px;color:#20201e}h1{font-size:32px}.meta{color:#777;margin-bottom:30px}.line{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:12px 0}.total{font-size:22px;font-weight:bold;padding-top:20px;text-align:right}.terms{margin-top:35px;background:#f5f3ee;padding:18px;border-radius:8px}</style></head><body><h1>CREATIVE PRODUCTION QUOTATION</h1><div class="meta"><b>Client:</b> ${esc(pitchData.clientName)}<br><b>Project:</b> ${esc(state.name)}<br><b>Quote:</b> ${esc(q.number)}<br><b>Date:</b> ${new Date().toLocaleDateString()}</div>${q.lines.map(l=>`<div class="line"><span>${esc(l.name)}</span><span>KES ${(Number(l.amount)||0).toLocaleString()}</span></div>`).join('')}<div class="total">TOTAL: KES ${total.toLocaleString()}</div><div class="terms"><b>Payment Terms</b><br>${esc(q.payment)}<br><br><b>Validity</b><br>${esc(q.validity)}</div></body></html>`}
+function showClientPreview(){pitchData.clientName=$('#clientName').value;pitchData.objective=$('#pitchObjective').value;pitchData.bigIdea=$('#bigIdea').value;pitchData.whyWorks=$('#whyWorks').value;pitchData.execution=$('#executionNotes').value;savePitch();let p=document.createElement('div');p.className='client-preview';let cards=state.items.map(i=>`<article class="client-card"><h3>${esc(i.title)}</h3><small>${esc(types[i.type][0])}</small><p>${esc(i.content||'').replace(/\n/g,'<br>')}</p>${i.src&&i.type==='image'?`<img src="${i.src}">`:''}</article>`).join('');p.innerHTML=`<button class="btn close-client" onclick="this.parentElement.remove()">Close preview</button><div class="client-sheet"><div class="modal-kicker">CREATIVE PROPOSAL</div><h1>${esc(state.name)}</h1><p>${esc(pitchData.clientName)}</p><section class="client-section"><h2>The Big Idea</h2><p>${esc(pitchData.bigIdea).replace(/\n/g,'<br>')}</p></section><section class="client-section"><h2>Objective</h2><p>${esc(pitchData.objective).replace(/\n/g,'<br>')}</p></section><section class="client-section"><h2>Why This Works</h2><p>${esc(pitchData.whyWorks).replace(/\n/g,'<br>')}</p></section><section class="client-section"><h2>Storyboard & Creative Direction</h2><div class="client-cards">${cards||'<p>No storyboard cards yet.</p>'}</div></section><section class="client-section"><h2>Execution</h2><p>${esc(pitchData.execution).replace(/\n/g,'<br>')}</p></section><section class="client-approve"><h2>Ready to move forward?</h2><p>Approve the creative concept so the production quotation can be generated.</p><button class="btn primary" onclick="document.querySelector('.client-preview').remove();document.getElementById('pitchModal').hidden=false;document.querySelector('[data-tab=approval]').click()">Approve Concept</button></section></div>`;document.body.appendChild(p)}
+$('#pitchBtn').onclick=openPitch;$('#closePitch').onclick=closePitch;$('#previewClient').onclick=showClientPreview;document.querySelectorAll('.pitch-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.pitch-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');['pitch','approval','quote'].forEach(x=>$('#'+x+'Tab').hidden=x!==t.dataset.tab);if(t.dataset.tab==='approval')renderApproval();if(t.dataset.tab==='quote')renderApproval()});$('#approveConcept').onclick=()=>{pitchData.clientName=$('#clientName').value||$('#approvalName').value;pitchData.approved=true;pitchData.approval={name:$('#approvalName').value||pitchData.clientName,email:$('#approvalEmail').value,note:$('#approvalNote').value,date:new Date().toISOString()};savePitch();renderApproval();toast('Concept approved — quote unlocked')};$('#addQuoteLine').onclick=()=>{pitchData.quote.lines.push({name:'New Service',amount:0});renderQuoteLines();savePitch()};$('#quoteNumber').oninput=e=>{pitchData.quote.number=e.target.value;savePitch()};$('#quoteValidity').oninput=e=>{pitchData.quote.validity=e.target.value;savePitch()};$('#paymentTerms').oninput=e=>{pitchData.quote.payment=e.target.value;savePitch()};$('#generateQuote').onclick=()=>{let w=window.open('','_blank');if(!w){toast('Allow pop-ups for quote export');return}w.document.write(quoteHTML());w.document.close();setTimeout(()=>w.print(),500)};
