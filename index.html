@@ -1,114 +1,108 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FrameDeck</title>
-<link rel="stylesheet" href="style.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FrameDeck</title><link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app" class="app">
+<div id="app">
 <header class="topbar">
   <div class="brand">Frame<span>Deck</span></div>
   <input id="projectName" class="project-name" value="Untitled Creative Project">
-  <div class="top-actions">
-    <button class="icon-btn" id="undoBtn">↶</button><button class="icon-btn" id="redoBtn">↷</button>
-    <button class="icon-btn" id="zoomOut">−</button><span id="zoomValue">100%</span><button class="icon-btn" id="zoomIn">+</button>
-    <button class="btn" id="fitBtn">Fit</button><button class="btn" id="saveBtn">Save</button>
-    <div class="export-wrap"><button class="btn" id="exportBtn">Export ▾</button>
-      <div id="exportMenu" class="export-menu">
-        <button data-export="json">Project JSON</button><button data-export="html">Web Page</button>
-        <button data-export="doc">Word (.doc)</button><button data-export="pdf">PDF / Print</button><button data-export="txt">Text</button>
-      </div>
-    </div>
-    <button class="btn" id="pitchBtn">Pitch</button><button class="btn primary" id="presentBtn">Present</button>
-    <button class="btn" id="fullscreenBtn">Clean Canvas</button>
+  <div class="actions">
+    <button class="btn" id="undo">↶</button><button class="btn" id="redo">↷</button>
+    <button class="btn" id="minus">−</button><span id="zoom">100%</span><button class="btn" id="plus">+</button>
+    <button class="btn" id="fit">Fit</button><button class="btn" id="save">Save</button>
+    <button class="btn" id="export">Export</button><button class="btn primary" id="pitch">Pitch</button>
+    <button class="btn" id="clean">Clean Canvas</button>
   </div>
 </header>
 
-<aside id="leftbar" class="leftbar">
-  <button class="collapse left-collapse" id="collapseLeft" title="Retract toolbar">‹</button>
-  <div class="left-inner">
-    <div class="left-section-title">Create</div>
-    <button class="add-tool" data-type="text"><b>T</b><span>Text</span></button>
-    <button class="add-tool" data-type="image"><b>▧</b><span>Image</span></button>
-    <button class="add-tool" data-type="video"><b>▶</b><span>Video</span></button>
-    <button class="add-tool" data-type="shot"><b>🎬</b><span>Shot</span></button>
-    <button class="add-tool" data-type="note"><b>●</b><span>Note</span></button>
-    <button class="add-tool" data-type="link"><b>↗</b><span>Link</span></button>
-    <button class="add-tool" data-type="checklist"><b>✓</b><span>Tasks</span></button>
-    <button class="add-tool" data-type="color"><b>◼</b><span>Color</span></button>
-    <button class="add-tool" data-type="section"><b>▤</b><span>Section</span></button>
-    <div class="left-divider"></div>
-    <button id="uploadBtn" class="upload-btn">Upload files</button><input id="fileInput" type="file" multiple accept="image/*,video/*" hidden>
-    <div class="left-bottom"><button id="deleteBtn" class="small-btn">Delete selected</button><button id="clearBtn" class="small-btn">Clear board</button></div>
+<aside id="left" class="left">
+  <button id="leftToggle" class="railToggle">‹</button>
+  <div class="leftContent">
+    <h4>CREATE</h4>
+    <button class="tool" data-type="text">T<span>Text</span></button>
+    <button class="tool" data-type="image">▧<span>Image</span></button>
+    <button class="tool" data-type="video">▶<span>Video</span></button>
+    <button class="tool" data-type="shot">🎬<span>Shot</span></button>
+    <button class="tool" data-type="note">●<span>Note</span></button>
+    <button class="tool" data-type="link">↗<span>Link</span></button>
+    <button class="tool" data-type="tasks">✓<span>Tasks</span></button>
+    <button class="tool" data-type="color">■<span>Color</span></button>
+    <button class="tool" data-type="section">▤<span>Section</span></button>
+    <hr>
+    <button class="upload" id="upload">Upload files</button>
+    <input id="files" type="file" multiple accept="image/*,video/*" hidden>
+    <button class="mini" id="delete">Delete selected</button>
   </div>
 </aside>
 
-<main id="viewport" class="viewport">
-  <div id="board" class="board"><div class="grid"></div><div id="items"></div></div>
-  <div id="emptyHint" class="empty-hint"><strong>Start your creative board</strong><span>Drag cards • Wheel to zoom • Space + drag to pan • F to fit • Tab for clean canvas</span></div>
-  <div class="canvas-help">Space + drag: pan • Wheel: zoom • F: fit • Tab: interface</div>
+<main id="viewport">
+  <div id="board"><div class="dots"></div><div id="items"></div></div>
+  <div id="hint"><b>Start your creative board</b><span>Add cards from the left toolbar</span></div>
+  <div class="help">Wheel: zoom • Space + drag: pan • F: fit • Tab: clean canvas</div>
 </main>
 
-<aside id="rightbar" class="rightbar">
-  <button class="collapse right-collapse" id="collapseRight" title="Retract inspector">›</button>
-  <div class="right-inner">
-    <div class="inspector-title">Inspector</div>
-    <div id="noSelection" class="no-selection">Select an item to edit it.</div>
-    <div id="inspector" hidden>
-      <label>Type</label><div id="selectedType" class="type-pill"></div>
-      <label>Title</label><input id="fieldTitle">
-      <label>Content</label><textarea id="fieldContent"></textarea>
-      <div class="two"><div><label>X</label><input id="fieldX" type="number"></div><div><label>Y</label><input id="fieldY" type="number"></div></div>
-      <div class="two"><div><label>Width</label><input id="fieldW" type="number"></div><div><label>Height</label><input id="fieldH" type="number"></div></div>
-      <label>Color</label><div id="colorChoices" class="color-choices"></div>
-      <div id="shotFields" hidden><label>Shot size</label><select id="shotSize"><option>Wide</option><option>Medium</option><option>Close Up</option><option>Extreme Close Up</option><option>Over The Shoulder</option><option>POV</option></select><label>Camera movement</label><input id="cameraMove"><label>Lens</label><input id="lens"><label>Audio</label><input id="audio"><label>Director notes</label><textarea id="directorNotes"></textarea></div>
-      <div id="linkFields" hidden><label>URL</label><input id="urlField" type="url"></div>
-      <button id="duplicateBtn" class="btn full">Duplicate</button><button id="bringFrontBtn" class="btn full">Bring to front</button><button id="deleteSelected" class="danger-btn full">Delete</button>
-    </div>
+<aside id="right" class="right">
+  <button id="rightToggle" class="railToggle">›</button>
+  <div class="rightContent">
+    <h3>Inspector</h3><div id="empty">Select an item to edit it.</div>
+    <section id="inspector" hidden>
+      <label>Type</label><div id="type" class="pill"></div>
+      <label>Title</label><input id="title">
+      <label>Content</label><textarea id="content"></textarea>
+      <div class="twocol"><div><label>X</label><input id="x" type="number"></div><div><label>Y</label><input id="y" type="number"></div></div>
+      <div class="twocol"><div><label>Width</label><input id="w" type="number"></div><div><label>Height</label><input id="h" type="number"></div></div>
+      <label>Color</label><div id="colors" class="colors"></div>
+      <div id="shotBox" hidden>
+        <label>Shot size</label><select id="shotSize"><option>Wide</option><option>Medium</option><option>Close Up</option><option>Extreme Close Up</option><option>POV</option></select>
+        <label>Camera movement</label><input id="move"><label>Lens</label><input id="lens"><label>Audio</label><input id="audio"><label>Director notes</label><textarea id="notes"></textarea>
+      </div>
+      <div id="linkBox" hidden><label>URL</label><input id="url"></div>
+      <button class="wide" id="duplicate">Duplicate</button><button class="wide danger" id="remove">Delete</button>
+    </section>
   </div>
 </aside>
-<div id="toast" class="toast"></div>
-<div id="pitchModal" class="modal-backdrop" hidden>
-  <div class="pitch-modal">
-    <button class="modal-close" id="closePitch">×</button>
-    <div class="pitch-tabs"><button class="pitch-tab active" data-tab="pitch">Pitch</button><button class="pitch-tab" data-tab="approval">Approval</button><button class="pitch-tab" data-tab="quote">Quote</button></div>
-    <section id="pitchTab" class="pitch-panel">
-      <div class="modal-kicker">CLIENT PRESENTATION</div>
-      <h1 id="pitchTitle">Creative Proposal</h1>
-      <p class="muted">Turn your board into a client-facing concept pitch.</p>
-      <div class="pitch-grid"><label>Client name<input id="clientName" placeholder="Client / Brand"></label><label>Project objective<input id="pitchObjective" placeholder="What are we trying to achieve?"></label></div>
-      <label>Big idea<textarea id="bigIdea" placeholder="Explain the concept in one strong paragraph."></textarea></label>
-      <label>Why it works<textarea id="whyWorks" placeholder="Audience, brand value, distribution, emotional hook..."></textarea></label>
-      <label>Execution notes<textarea id="executionNotes" placeholder="Location, talent, camera, lighting, deliverables..."></textarea></label>
-      <button class="btn primary full" id="previewClient">Preview Client Presentation</button>
-    </section>
-    <section id="approvalTab" class="pitch-panel" hidden>
-      <div class="modal-kicker">CONCEPT APPROVAL</div>
-      <h2>Approval status</h2>
-      <div id="approvalStatus" class="approval-status locked">🔒 Waiting for client approval</div>
-      <label>Client name<input id="approvalName" placeholder="Client name"></label>
-      <label>Client email<input id="approvalEmail" type="email" placeholder="client@example.com"></label>
-      <label>Approval note<textarea id="approvalNote" placeholder="Optional note"></textarea></label>
-      <button class="btn primary full" id="approveConcept">Approve Concept</button>
-      <div class="muted small-note">In this local version, approval is recorded on this browser. Online client links and server-side signatures will be added when we connect a database.</div>
-    </section>
-    <section id="quoteTab" class="pitch-panel" hidden>
-      <div class="modal-kicker">QUOTE GENERATOR</div>
-      <div id="quoteLocked" class="approval-status locked">🔒 Approve the concept first to unlock the quote.</div>
-      <div id="quoteBuilder" hidden>
-        <div class="pitch-grid"><label>Quote number<input id="quoteNumber" value="FD-001"></label><label>Validity<input id="quoteValidity" value="14 days"></label></div>
-        <label>Payment terms<input id="paymentTerms" value="50% deposit / 50% completion"></label>
-        <div id="quoteLines"></div>
-        <button class="btn" id="addQuoteLine">+ Add service</button>
-        <div class="quote-total"><span>Total</span><strong id="quoteTotal">KES 0</strong></div>
-        <button class="btn primary full" id="generateQuote">Generate Quote</button>
+<div id="exportMenu" class="menu" hidden>
+  <b>Export</b><button data-exp="json">Project JSON</button><button data-exp="html">Web page</button><button data-exp="doc">Word (.doc)</button><button data-exp="pdf">PDF / Print</button><button data-exp="txt">Text</button>
+</div>
+
+<div id="pitchModal" class="modal" hidden>
+  <div class="pitch">
+    <button class="close" id="closePitch">×</button>
+    <div id="pitchEditor">
+      <div class="eyebrow">CREATIVE PROPOSAL</div>
+      <input id="pitchTitle" class="heroInput" value="Your Campaign Concept">
+      <textarea id="pitchIdea" class="heroText">Describe the big idea and the feeling you want the audience to leave with.</textarea>
+      <div class="pitchGrid">
+        <div><h2>01 — The Idea</h2><p id="pIdea"></p></div>
+        <div><h2>02 — Why It Works</h2><textarea id="pitchWhy">• Strong visual identity
+• Clear emotional hook
+• Designed for social distribution
+• Multiple content opportunities</textarea></div>
+        <div><h2>03 — Visual World</h2><p>Use your board cards as the visual reference and storyboard.</p></div>
+        <div><h2>04 — Execution</h2><textarea id="pitchExecution">Camera:
+Location:
+Talent:
+Lighting:
+Deliverables:</textarea></div>
       </div>
-    </section>
+      <div class="pitchActions"><button class="btn primary" id="approve">Approve Concept</button><button class="btn" id="clientView">Client View</button></div>
+    </div>
+    <div id="approvedPanel" hidden>
+      <div class="approved">✓ CONCEPT APPROVED</div>
+      <p id="approvalInfo"></p>
+      <h2>Generate Quote</h2>
+      <div id="quoteLines"></div>
+      <button class="btn" id="addLine">+ Add line</button>
+      <div class="quoteTotal">TOTAL: <span id="total">KES 0</span></div>
+      <label>Payment terms</label><input id="terms" value="50% deposit / 50% on completion">
+      <button class="btn primary" id="makeQuote">Generate Quote</button>
+      <button class="btn" id="clientView2">Client View</button>
+    </div>
   </div>
 </div>
-</div>
+<div id="toast"></div>
 <script src="app.js"></script>
-</body>
-</html>
+</body></html>
