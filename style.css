@@ -11,3 +11,9 @@
 @media(max-width:900px){.project-name{width:150px}.actions .btn:nth-child(6),.actions .btn:nth-child(7){display:none}.pitchGrid{grid-template-columns:1fr}}
 
 [hidden]{display:none!important}
+
+.referenceActions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.referenceActions .wide{margin-top:0}
+.referenceStatus{font-size:10px;color:#777;padding:6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shotFrame img,.shotFrame video{width:100%;height:100%;object-fit:cover}
+[hidden]{display:none!important}

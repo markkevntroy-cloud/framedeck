@@ -11,7 +11,7 @@ function transform(){$("board").style.transform=`translate(${S.px}px,${S.py}px) 
 function centre(){S.px=$("viewport").clientWidth/2;S.py=$("viewport").clientHeight/2;transform()}
 function zoomAt(z,cx,cy){z=Math.max(.25,Math.min(4,z));let r=$("viewport").getBoundingClientRect(),x=cx??r.width/2,y=cy??r.height/2,wx=(x-S.px)/S.z,wy=(y-S.py)/S.z;S.z=z;S.px=x-wx*z;S.py=y-wy*z;transform()}
 function make(type){let d=defs[type],i={id:crypto.randomUUID?crypto.randomUUID():Date.now()+Math.random(),type,x:5000-S.px/S.z+30,y:3500-S.py/S.z+30,w:d[1],h:d[2],title:d[0],color:d[3],content:""};if(type==="text")i.content="Your creative idea goes here.";if(type==="note")i.content="Add a note...";if(type==="tasks")i.content="Confirm concept\nPrepare shoot\nEdit first cut\nFinal delivery";if(type==="section")i.content="CREATIVE DIRECTION";if(type==="link")i.content="Reference";if(type==="color")i.content="#7157e8";if(type==="shot")Object.assign(i,{content:"Describe the shot",shotSize:"Wide",move:"Slow push-in",lens:"24mm",audio:"Natural ambience",notes:"Director notes"});return i}
-function add(type){hist();let i=make(type);S.items.push(i);S.selected=i.id;render();inspect();persist()}
+function add(type){hist();let i=make(type);S.items.push(i);S.selected=i.id;render();inspect();persist();if(type==="image"||type==="video")setTimeout(()=>$("files").click(),0)}
 function select(id){S.selected=id;render();inspect()}
 function card(i){let c=document.createElement("div");c.className="card"+(S.selected===i.id?" sel":"");c.style.cssText=`left:${i.x}px;top:${i.y}px;width:${i.w}px;height:${i.h}px`;c.innerHTML=`<div class="head"><span>⠿</span><span class="dot" style="background:${i.color}"></span><span>${escape(i.title)}</span></div>`;let b=document.createElement("div");b.className="body";
 if(i.type==="text"||i.type==="note"){b.classList.add(i.type==="note"?"noteBody":"textBody");b.textContent=i.content}
@@ -20,12 +20,12 @@ if(i.type==="color"){b.classList.add("colorBody");b.innerHTML=`<div class="swatc
 if(i.type==="section"){b.classList.add("sectionBody");b.textContent=i.content}
 if(i.type==="tasks"){String(i.content).split("\n").filter(Boolean).forEach(t=>b.innerHTML+=`<label class="check"><input type="checkbox">${escape(t)}</label>`)}
 if(i.type==="link"){b.innerHTML=`<b>${escape(i.content)}</b><br><br><a href="${escape(i.url||"#")}" target="_blank">${escape(i.url||"Add URL")}</a>`}
-if(i.type==="shot"){b.classList.add("shotBody");b.innerHTML=`<div class="shotFrame">${i.src?`<img src="${i.src}">`:"FRAME REFERENCE"}</div><b>${escape(i.content)}</b><p>Size: ${escape(i.shotSize)}<br>Move: ${escape(i.move)}<br>Lens: ${escape(i.lens)}<br>Audio: ${escape(i.audio)}</p><small>${escape(i.notes)}</small>`}
+if(i.type==="shot"){b.classList.add("shotBody");let ref=i.src?(i.mediaType==="video"?`<video src="${i.src}" controls muted playsinline></video>`:`<img src="${i.src}">`):"FRAME REFERENCE";b.innerHTML=`<div class="shotFrame">${ref}</div><b>${escape(i.content)}</b><p>Size: ${escape(i.shotSize)}<br>Move: ${escape(i.move)}<br>Lens: ${escape(i.lens)}<br>Audio: ${escape(i.audio)}</p><small>${escape(i.notes)}</small>`}
 c.appendChild(b);let r=document.createElement("div");r.className="resize";c.appendChild(r);c.onmousedown=e=>{if(e.target===r||e.target.closest("a,input"))return;select(i.id);drag(e,i,false)};r.onmousedown=e=>{e.stopPropagation();drag(e,i,true)};return c}
 function escape(x){return String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function render(){let box=$("items");box.innerHTML="";S.items.forEach(i=>box.appendChild(card(i)));$("hint").style.display=S.items.length?"none":"block";transform()}
 function drag(e,i,res){e.preventDefault();hist();let s={mx:e.clientX,my:e.clientY,x:i.x,y:i.y,w:i.w,h:i.h};function m(v){let dx=(v.clientX-s.mx)/S.z,dy=(v.clientY-s.my)/S.z;if(res){i.w=Math.max(90,s.w+dx);i.h=Math.max(70,s.h+dy)}else{i.x=s.x+dx;i.y=s.y+dy}render();inspect()}function u(){document.removeEventListener("mousemove",m);document.removeEventListener("mouseup",u);persist()}document.addEventListener("mousemove",m);document.addEventListener("mouseup",u)}
-function inspect(){let i=S.items.find(x=>x.id===S.selected);$("empty").hidden=!!i;$("inspector").hidden=!i;if(!i)return;$("type").textContent=defs[i.type][0];$("title").value=i.title||"";$("content").value=i.content||"";$("x").value=i.x;$("y").value=i.y;$("w").value=i.w;$("h").value=i.h;$("colors").innerHTML=colors.map(c=>`<button data-c="${c}" style="background:${c}"></button>`).join("");$("colors").querySelectorAll("button").forEach(b=>b.onclick=()=>{hist();i.color=b.dataset.c;render();inspect();persist()});$("shotBox").hidden=i.type!=="shot";$("linkBox").hidden=i.type!=="link";if(i.type==="shot"){["shotSize","move","lens","audio","notes"].forEach(k=>$(k).value=i[k]||"")}if(i.type==="link")$("url").value=i.url||""}
+function inspect(){let i=S.items.find(x=>x.id===S.selected);$("empty").hidden=!!i;$("inspector").hidden=!i;if(!i)return;$("type").textContent=defs[i.type][0];$("title").value=i.title||"";$("content").value=i.content||"";$("x").value=i.x;$("y").value=i.y;$("w").value=i.w;$("h").value=i.h;$("colors").innerHTML=colors.map(c=>`<button data-c="${c}" style="background:${c}"></button>`).join("");$("colors").querySelectorAll("button").forEach(b=>b.onclick=()=>{hist();i.color=b.dataset.c;render();inspect();persist()});$("shotBox").hidden=i.type!=="shot";$("linkBox").hidden=i.type!=="link";if(i.type==="shot"){["shotSize","move","lens","audio","notes"].forEach(k=>$(k).value=i[k]||"");$("referenceStatus").textContent=i.src?("Attached: "+(i.fileName||i.mediaType||"reference")):"No reference attached"}if(i.type==="link")$("url").value=i.url||""}
 function bind(id,key,num=false){$(id).oninput=e=>{let i=S.items.find(x=>x.id===S.selected);if(!i)return;i[key]=num?Number(e.target.value):e.target.value;render();persist()}}
 [["title","title"],["content","content"],["x","x",1],["y","y",1],["w","w",1],["h","h",1],["shotSize","shotSize"],["move","move"],["lens","lens"],["audio","audio"],["notes","notes"],["url","url"]].forEach(a=>bind(...a));
 function remove(){if(!S.selected)return;hist();S.items=S.items.filter(i=>i.id!==S.selected);S.selected=null;render();inspect();persist()}
@@ -63,6 +63,28 @@ function clientView(){
   w.document.open();w.document.write(page);w.document.close();
 }
 function fit(){if(!S.items.length)return centre();let minX=Math.min(...S.items.map(i=>i.x)),minY=Math.min(...S.items.map(i=>i.y)),maxX=Math.max(...S.items.map(i=>i.x+i.w)),maxY=Math.max(...S.items.map(i=>i.y+i.h));let bw=maxX-minX,bh=maxY-minY;S.z=Math.max(.25,Math.min(1.5,($("viewport").clientWidth-100)/bw,($("viewport").clientHeight-100)/bh));S.px=$("viewport").clientWidth/2-((minX+maxX)/2-5000)*S.z;S.py=$("viewport").clientHeight/2-((minY+maxY)/2-3500)*S.z;transform()}
+$("addReference").onclick=()=>{
+  let i=S.items.find(x=>x.id===S.selected);
+  if(!i||i.type!=="shot")return toast("Select a shot card first");
+  $("referenceFile").value=""; $("referenceFile").click();
+};
+$("clearReference").onclick=()=>{
+  let i=S.items.find(x=>x.id===S.selected); if(!i||i.type!=="shot")return;
+  hist(); delete i.src; delete i.mediaType; delete i.fileName;
+  render(); inspect(); persist(); toast("Reference removed");
+};
+$("referenceFile").onchange=e=>{
+  let i=S.items.find(x=>x.id===S.selected), f=e.target.files[0];
+  if(!i||i.type!=="shot"||!f)return;
+  if(!f.type.startsWith("image/")&&!f.type.startsWith("video/"))return toast("Choose an image or video");
+  if(f.size>50*1024*1024)return toast("Reference must be under 50 MB");
+  let rd=new FileReader();
+  rd.onload=()=>{
+    hist(); i.src=rd.result; i.mediaType=f.type.startsWith("video/")?"video":"image"; i.fileName=f.name;
+    render(); inspect(); persist(); toast("Frame reference added");
+  };
+  rd.readAsDataURL(f);
+};
 document.querySelectorAll(".tool").forEach(b=>b.onclick=()=>add(b.dataset.type));$("upload").onclick=()=>$("files").click();$("files").onchange=e=>[...e.target.files].forEach(f=>{let rd=new FileReader();rd.onload=()=>{hist();let type=f.type.startsWith("video")?"video":"image",i=make(type);i.src=rd.result;i.title=f.name;S.items.push(i);S.selected=i.id;render();inspect();persist()};rd.readAsDataURL(f)});$("delete").onclick=remove;$("remove").onclick=remove;
 $("leftToggle").onclick=()=>{$("app").classList.toggle("leftRetracted");$("leftToggle").textContent=$("app").classList.contains("leftRetracted")?"›":"‹"};$("rightToggle").onclick=()=>{$("app").classList.toggle("rightRetracted");$("rightToggle").textContent=$("app").classList.contains("rightRetracted")?"‹":"›"};$("clean").onclick=()=>document.body.classList.toggle("clean");
 $("plus").onclick=()=>zoomAt(S.z*1.15);$("minus").onclick=()=>zoomAt(S.z/1.15);$("fit").onclick=fit;$("save").onclick=()=>{persist();toast("Saved")};$("projectName").oninput=e=>S.name=e.target.value;

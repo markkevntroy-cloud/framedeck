@@ -56,7 +56,14 @@
       <div class="twocol"><div><label>Width</label><input id="w" type="number"></div><div><label>Height</label><input id="h" type="number"></div></div>
       <label>Color</label><div id="colors" class="colors"></div>
       <div id="shotBox" hidden>
-        <label>Shot size</label><select id="shotSize"><option>Wide</option><option>Medium</option><option>Close Up</option><option>Extreme Close Up</option><option>POV</option></select>
+        <label>Frame reference</label>
+<div class="referenceActions">
+<button type="button" class="wide" id="addReference">Add image / video</button>
+<button type="button" class="wide" id="clearReference">Remove reference</button>
+</div>
+<input id="referenceFile" type="file" accept="image/*,video/*" hidden>
+<div id="referenceStatus" class="referenceStatus">No reference attached</div>
+<label>Shot size</label><select id="shotSize"><option>Wide</option><option>Medium</option><option>Close Up</option><option>Extreme Close Up</option><option>POV</option></select>
         <label>Camera movement</label><input id="move"><label>Lens</label><input id="lens"><label>Audio</label><input id="audio"><label>Director notes</label><textarea id="notes"></textarea>
       </div>
       <div id="linkBox" hidden><label>URL</label><input id="url"></div>
