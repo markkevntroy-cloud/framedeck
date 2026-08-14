@@ -1,7 +1,7 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), colors=["#f5c542","#ff8a65","#ef5350","#66bb6a","#29b6f6","#7157e8","#ec4899","#111827","#fff"];
 const defs={text:["Text",300,180,"#7157e8"],image:["Image",380,280,"#29b6f6"],video:["Video",420,280,"#ef5350"],shot:["Shot",360,380,"#7157e8"],note:["Note",270,220,"#f5c542"],link:["Link",320,170,"#29b6f6"],tasks:["Tasks",300,220,"#66bb6a"],color:["Color",190,190,"#7157e8"],section:["Section",520,110,"#111827"]};
-let S={name:"Untitled Creative Project",items:[],connections:[],selected:null,z:1,px:0,py:0,h:[],f:[],approved:false,approval:null,quote:[]}, space=false, connectMode=false, connectSource=null;
+let S={name:"Untitled Creative Project",items:[],connections:[],selected:null,z:1,px:0,py:0,h:[],f:[],approved:false,approval:null,quote:[]}, space=false, connectMode=false, connectSource=null, mediaResize=false;
 function toast(x){$("toast").textContent=x;$("toast").classList.add("show");clearTimeout(window._t);window._t=setTimeout(()=>$("toast").classList.remove("show"),1300)}
 function snap(){return JSON.stringify({name:S.name,items:S.items,connections:S.connections||[]})}
 function hist(){S.h.push(snap());S.f=[]}
@@ -24,8 +24,28 @@ if(i.type==="color"){b.classList.add("colorBody");b.innerHTML=`<div class="swatc
 if(i.type==="section"){b.classList.add("sectionBody");b.textContent=i.content}
 if(i.type==="tasks"){String(i.content).split("\n").filter(Boolean).forEach(t=>b.innerHTML+=`<label class="check"><input type="checkbox">${escape(t)}</label>`)}
 if(i.type==="link"){b.innerHTML=`<b>${escape(i.content)}</b><br><br><a href="${escape(i.url||"#")}" target="_blank">${escape(i.url||"Add URL")}</a>`}
-if(i.type==="shot"){b.classList.add("shotBody");let ref=i.src?(i.mediaType==="video"?`<video src="${i.src}" controls muted playsinline></video>`:`<img src="${i.src}">`):"FRAME REFERENCE";b.innerHTML=`<div class="shotFrame">${ref}</div><b>${escape(i.content)}</b><p>Size: ${escape(i.shotSize)}<br>Move: ${escape(i.move)}<br>Lens: ${escape(i.lens)}<br>Audio: ${escape(i.audio)}</p><small>${escape(i.notes)}</small>`}
+if(i.type==="shot"){
+ b.classList.add("shotBody");
+ let mw=i.mediaW||100,mh=i.mediaH||100,mx=i.mediaX||0,my=i.mediaY||0;
+ let ref=i.src?(i.mediaType==="video"?`<video class="shotMedia" src="${i.src}" controls muted playsinline></video>`:`<img class="shotMedia" src="${i.src}">`):"FRAME REFERENCE";
+ b.innerHTML=`<div class="shotFrame"><div class="shotMediaWrap" style="width:${mw}%;height:${mh}%;left:${mx}%;top:${my}%">${ref}${i.src?'<div class="mediaResizeHandle" title="Resize media"></div>':""}</div></div><b>${escape(i.content)}</b><p>Size: ${escape(i.shotSize)}<br>Move: ${escape(i.move)}<br>Lens: ${escape(i.lens)}<br>Audio: ${escape(i.audio)}</p><small>${escape(i.notes)}</small>`;
+}
 c.appendChild(b);
+if(i.type==="shot" && i.src){
+ let mh=c.querySelector(".mediaResizeHandle");
+ if(mh) mh.onmousedown=e=>{
+   e.preventDefault();e.stopPropagation();hist();
+   let wrap=mh.parentElement, start={x:e.clientX,y:e.clientY,w:i.mediaW||100,h:i.mediaH||100};
+   let frame=wrap.parentElement.getBoundingClientRect();
+   function mm(ev){
+     i.mediaW=Math.max(20,Math.min(200,start.w+((ev.clientX-start.x)/frame.width)*100));
+     i.mediaH=Math.max(20,Math.min(200,start.h+((ev.clientY-start.y)/frame.height)*100));
+     render();inspect();
+   }
+   function mu(){document.removeEventListener("mousemove",mm);document.removeEventListener("mouseup",mu);persist()}
+   document.addEventListener("mousemove",mm);document.addEventListener("mouseup",mu);
+ };
+}
 let close=c.querySelector(".cardClose");
 close.onclick=e=>{e.stopPropagation();select(i.id);remove()};
 let r=document.createElement("div");r.className="resize";c.appendChild(r);
