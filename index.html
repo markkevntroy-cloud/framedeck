@@ -12,7 +12,7 @@
   <div class="actions">
     <button class="btn" id="undo">↶</button><button class="btn" id="redo">↷</button>
     <button class="btn" id="minus">−</button><span id="zoom">100%</span><button class="btn" id="plus">+</button>
-    <button class="btn" id="fit">Fit</button><button class="btn" id="save">Save</button>
+    <button class="btn" id="fit">Fit</button><button class="btn" id="connectMode">Connect</button><button class="btn" id="save">Save</button>
     <button class="btn" id="export">Export</button><button class="btn primary" id="pitch">Pitch</button>
     <button class="btn" id="clean">Clean Canvas</button>
   </div>
@@ -39,7 +39,9 @@
 </aside>
 
 <main id="viewport">
-  <div id="board"><div class="dots"></div><div id="items"></div></div>
+  <div id="board"><div class="dots"></div><svg id="connections" class="connections" aria-hidden="true">
+<defs><marker id="flowArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker></defs>
+</svg><div id="items"></div></div>
   <div id="hint"><b>Start your creative board</b><span>Add cards from the left toolbar</span></div>
   <div class="help">Wheel: zoom • Space + drag: pan • F: fit • Tab: clean canvas</div>
 </main>
