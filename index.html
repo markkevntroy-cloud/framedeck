@@ -1,117 +1,48 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FrameDeck</title><link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Storyboard Creator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://tailwindcss.com"></script>
+    <!-- html2pdf.js library for high-quality PDF exports -->
+    <script src="https://cloudflare.com"></script>
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<div id="app">
-<header class="topbar">
-  <div class="brand">Frame<span>Deck</span></div>
-  <input id="projectName" class="project-name" value="Untitled Creative Project">
-  <div class="actions">
-    <button class="btn" id="undo">↶</button><button class="btn" id="redo">↷</button>
-    <button class="btn" id="minus">−</button><span id="zoom">100%</span><button class="btn" id="plus">+</button>
-    <button class="btn" id="fit">Fit</button><button class="btn" id="connectMode">Connect</button><button class="btn" id="save">Save</button>
-    <button class="btn" id="export">Export</button><button class="btn primary" id="pitch">Pitch</button>
-    <button class="btn" id="clean">Clean Canvas</button>
-  </div>
-</header>
+<body class="bg-gray-100 min-h-screen p-4 sm:p-8 font-sans">
 
-<aside id="left" class="left">
-  <button id="leftToggle" class="railToggle">‹</button>
-  <div class="leftContent">
-    <h4>CREATE</h4>
-    <button class="tool" data-type="text">T<span>Text</span></button>
-    <button class="tool" data-type="image">▧<span>Image</span></button>
-    <button class="tool" data-type="video">▶<span>Video</span></button>
-    <button class="tool" data-type="shot">🎬<span>Shot</span></button>
-    <button class="tool" data-type="note">●<span>Note</span></button>
-    <button class="tool" data-type="link">↗<span>Link</span></button>
-    <button class="tool" data-type="tasks">✓<span>Tasks</span></button>
-    <button class="tool" data-type="color">■<span>Color</span></button>
-    <button class="tool" data-type="section">▤<span>Section</span></button>
-    <hr>
-    <button class="upload" id="upload">Upload files</button>
-    <input id="files" type="file" multiple accept="image/*,video/*" hidden>
-    <button class="mini" id="delete">Delete selected</button>
-  </div>
-</aside>
+    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6">
+        <!-- Control Header (Hidden in exported PDF) -->
+        <div class="no-print flex flex-wrap justify-between items-center border-b pb-4 mb-6 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Storyboard Board Generator</h1>
+                <p class="text-sm text-gray-500">Fill in details, upload images/GIFs, and export to PDF.</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="add-shot-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition">
+                    + Add Shot
+                </button>
+                <button id="export-pdf-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition">
+                    Download PDF
+                </button>
+            </div>
+        </div>
 
-<main id="viewport">
-  <div id="board"><div class="dots"></div><svg id="connections" class="connections" aria-hidden="true">
-<defs><marker id="flowArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker></defs>
-</svg><div id="items"></div></div>
-  <div id="hint"><b>Start your creative board</b><span>Add cards from the left toolbar</span></div>
-  <div class="help">Wheel: zoom • Space + drag: pan • F: fit • Tab: clean canvas</div>
-</main>
+        <!-- Document Header (Visible in PDF) -->
+        <div class="mb-6">
+            <input type="text" value="Project Title: My Awesome Video" class="text-2xl font-bold text-gray-800 border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full py-1">
+            <input type="text" value="Director: Jane Doe | Date: 2026-09-01" class="text-sm text-gray-500 border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full py-1 mt-1">
+        </div>
 
-<aside id="right" class="right">
-  <button id="rightToggle" class="railToggle">›</button>
-  <div class="rightContent">
-    <h3>Inspector</h3><div id="empty">Select an item to edit it.</div>
-    <section id="inspector" hidden>
-      <label>Type</label><div id="type" class="pill"></div>
-      <label>Title</label><input id="title">
-      <label>Content</label><textarea id="content"></textarea>
-      <div class="twocol"><div><label>X</label><input id="x" type="number"></div><div><label>Y</label><input id="y" type="number"></div></div>
-      <div class="twocol"><div><label>Width</label><input id="w" type="number"></div><div><label>Height</label><input id="h" type="number"></div></div>
-      <label>Color</label><div id="colors" class="colors"></div>
-      <div id="shotBox" hidden>
-        <label>Frame reference</label>
-<div class="referenceActions">
-<button type="button" class="wide" id="addReference">Add image / video</button>
-<button type="button" class="wide" id="clearReference">Remove reference</button>
-</div>
-<input id="referenceFile" type="file" accept="image/*,video/*" hidden>
-<div id="referenceStatus" class="referenceStatus">No reference attached</div>
-<label>Shot size</label><select id="shotSize"><option>Wide</option><option>Medium</option><option>Close Up</option><option>Extreme Close Up</option><option>POV</option></select>
-        <label>Camera movement</label><input id="move"><label>Lens</label><input id="lens"><label>Audio</label><input id="audio"><label>Director notes</label><textarea id="notes"></textarea>
-      </div>
-      <div id="linkBox" hidden><label>URL</label><input id="url"></div>
-      <button class="wide" id="duplicate">Duplicate</button><button class="wide danger" id="remove">Delete</button>
-    </section>
-  </div>
-</aside>
-<div id="exportMenu" class="menu" hidden>
-  <b>Export</b><button data-exp="json">Project JSON</button><button data-exp="html">Web page</button><button data-exp="doc">Word (.doc)</button><button data-exp="pdf">PDF / Print</button><button data-exp="txt">Text</button>
-</div>
-
-<div id="pitchModal" class="modal" hidden>
-  <div class="pitch">
-    <button class="close" id="closePitch">×</button>
-    <div id="pitchEditor">
-      <div class="eyebrow">CREATIVE PROPOSAL</div>
-      <input id="pitchTitle" class="heroInput" value="Your Campaign Concept">
-      <textarea id="pitchIdea" class="heroText">Describe the big idea and the feeling you want the audience to leave with.</textarea>
-      <div class="pitchGrid">
-        <div><h2>01 — The Idea</h2><p id="pIdea"></p></div>
-        <div><h2>02 — Why It Works</h2><textarea id="pitchWhy">• Strong visual identity
-• Clear emotional hook
-• Designed for social distribution
-• Multiple content opportunities</textarea></div>
-        <div><h2>03 — Visual World</h2><p>Use your board cards as the visual reference and storyboard.</p></div>
-        <div><h2>04 — Execution</h2><textarea id="pitchExecution">Camera:
-Location:
-Talent:
-Lighting:
-Deliverables:</textarea></div>
-      </div>
-      <div class="pitchActions"><button class="btn primary" id="approve">Approve Concept</button><button class="btn" id="clientView">Client View</button></div>
+        <!-- Storyboard Container -->
+        <div id="storyboard-container" class="space-y-6">
+            <!-- Dynamic rows are inserted here by app.js -->
+        </div>
     </div>
-    <div id="approvedPanel" hidden>
-      <div class="approved">✓ CONCEPT APPROVED</div>
-      <p id="approvalInfo"></p>
-      <h2>Generate Quote</h2>
-      <div id="quoteLines"></div>
-      <button class="btn" id="addLine">+ Add line</button>
-      <div class="quoteTotal">TOTAL: <span id="total">KES 0</span></div>
-      <label>Payment terms</label><input id="terms" value="50% deposit / 50% on completion">
-      <button class="btn primary" id="makeQuote">Generate Quote</button>
-      <button class="btn" id="clientView2">Client View</button>
-    </div>
-  </div>
-</div>
-<div id="toast"></div>
-<script src="app.js"></script>
-</body></html>
+
+    <!-- Application Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
